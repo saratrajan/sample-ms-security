@@ -1,5 +1,5 @@
 {
-  "$comment": "Ground truth for the risk-based testing tool. Hand-written from the source of this service. Entries marked verify=true are confirmed by a runtime class-loading check once the service builds.",
+  "$comment": "Ground truth for the risk-based testing tool. Hand-written from the source of this service. Entries with a verified field were confirmed by a runtime class-loading check against a real build.",
   "service": "sample-ms-security",
   "inventory": {
     "inbound": {
@@ -44,14 +44,14 @@
       "declaredVia": "Spring Boot BOM (Jackson 3, used by Spring MVC message conversion)",
       "usage": "FRAMEWORK: all JSON bodies; DIRECT: AuditPublisher (JsonMapper)",
       "inbound": ["E1", "E2", "E3"], "outbound": ["F1", "F2", "F3", "F4", "F5", "F6"], "crossCutting": ["X4"],
-      "verify": true
+      "verified": "2026-11-09: classes loaded at runtime in the test JVM (-Xlog:class+load); Jackson 2 reached via springdoc swagger-core"
     },
     {
       "coordinate": "com.fasterxml.jackson.core:jackson-core",
       "declaredVia": "explicit pin, gradle.properties jackson_core_version",
       "usage": "No code reference. Under Boot 4, MVC uses Jackson 3; Jackson 2 core is expected to be reached through springdoc (swagger-core).",
       "inbound": [], "outbound": [], "framework": ["S1"],
-      "verify": true
+      "verified": "2026-11-09: classes loaded at runtime in the test JVM (-Xlog:class+load); Jackson 2 reached via springdoc swagger-core"
     },
     {
       "coordinate": "org.apache.tomcat.embed:tomcat-embed-el",

@@ -10,9 +10,9 @@ Test fixture for the risk-based dependency regression tool (`riskbased-testing-m
 - `riskbased/feeds/` holds sample package feeds.
 
 ## Status (2026-11-09)
-- The initial commit was pushed on request WITHOUT ever being compiled (the cloud session had no Maven Central access). First job: `gradlew.bat build`, fix Boot 4.1 issues, keep the design intent in README.md.
-- Entries in expected-impact.json marked `"verify": true` (Jackson 2 vs 3 reach) must be confirmed from a real run.
-- Add a feed for BOM-managed libraries (tomcat-embed-el, hibernate-validator) once their resolved versions are known (`gradlew.bat dependencies --configuration runtimeClasspath`).
+- First green build achieved 2026-11-09 (JDK 21.0.13, Gradle 8.14.3, 6 tests pass), no code changes needed.
+- The `verify` entries (Jackson 2 vs 3 reach) were confirmed from a real run on 2026-11-09 and are now marked `verified`.
+- BOM feed added: `riskbased/feeds/04-bom-managed.txt` (resolved versions from `gradlew dependencies --configuration runtimeClasspath`).
 - The planted mismatch must stay: `codegen` configuration resolves bcprov 1.80 while `implementation` pins 1.85.
 
 ## Rules
