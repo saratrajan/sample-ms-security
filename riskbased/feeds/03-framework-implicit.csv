@@ -1,0 +1,3 @@
+group,artifact,version
+io.github.openfeign,feign-micrometer,13.2.1
+commons-io,commons-io,2.20.0

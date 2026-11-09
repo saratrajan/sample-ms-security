@@ -1,0 +1,7 @@
+[versions]
+springdoc = "3.0.0"
+feign-micrometer = "13.2.1"
+
+[libraries]
+springdoc-webmvc-ui = { module = "org.springdoc:springdoc-openapi-starter-webmvc-ui", version.ref = "springdoc" }
+feign-micrometer = { module = "io.github.openfeign:feign-micrometer", version.ref = "feign-micrometer" }

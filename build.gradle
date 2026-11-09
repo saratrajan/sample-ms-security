@@ -1,0 +1,80 @@
+plugins {
+    id 'java'
+    id 'jacoco'
+    id 'org.springframework.boot'
+    id 'io.spring.dependency-management'
+}
+
+group = 'io.github.saratrajan'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${spring_cloud_version}"
+    }
+}
+
+configurations {
+    // A tooling-only configuration (think: a code generator). It resolves its own, older
+    // bcprov on purpose so that version validation has a stray occurrence to find.
+    codegen
+}
+
+dependencies {
+    // Web, validation (hibernate-validator + tomcat-embed-el), actuator: versions from the Spring Boot BOM
+    implementation 'org.springframework.boot:spring-boot-starter-webmvc'
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+
+    // Outbound HTTP: version from the Spring Cloud BOM
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+    // Version catalog
+    implementation libs.feign.micrometer
+    implementation libs.springdoc.webmvc.ui
+
+    // gradle.properties pins
+    implementation "com.fasterxml.jackson.core:jackson-core:${jackson_core_version}"
+    implementation "org.bouncycastle:bcprov-jdk18on:${bcprov_version}"
+    implementation "commons-fileupload:commons-fileupload:${commons_fileupload_version}"
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    codegen "org.bouncycastle:bcprov-jdk18on:${bcprov_codegen_version}"
+}
+
+configurations.configureEach { cfg ->
+    if (cfg.name == 'codegen') {
+        return
+    }
+    resolutionStrategy.eachDependency { DependencyResolveDetails details ->
+        if (details.requested.group == 'commons-io' && details.requested.name == 'commons-io') {
+            details.useVersion commons_io_force_version
+            details.because 'Example CVE remediation pin applied through resolutionStrategy'
+        }
+    }
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}

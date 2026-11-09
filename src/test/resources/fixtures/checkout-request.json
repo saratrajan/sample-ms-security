@@ -1,0 +1,10 @@
+{
+  "customer_id": "C123456",
+  "currency": "USD",
+  "items": [
+    { "sku": "ABC-0001", "quantity": 2, "unitPrice": 10.00 }
+  ],
+  "payment": { "method": "CARD", "token": "tok_1234567890abcdef" },
+  "requested_at": "2026-11-09T10:00:00-08:00",
+  "notes": "leave at front desk"
+}

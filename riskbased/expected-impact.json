@@ -1,0 +1,104 @@
+{
+  "$comment": "Ground truth for the risk-based testing tool. Hand-written from the source of this service. Entries marked verify=true are confirmed by a runtime class-loading check once the service builds.",
+  "service": "sample-ms-security",
+  "inventory": {
+    "inbound": {
+      "E1": { "method": "POST", "path": "/orders/{orderId}:checkout", "handler": "OrderController#checkout", "validBody": true, "requiredHeaders": ["X-Client-Id"] },
+      "E2": { "method": "POST", "path": "/orders/{orderId}:cancel", "handler": "OrderController#cancel", "validBody": true, "requiredHeaders": ["X-Client-Id"] },
+      "E3": { "method": "GET", "path": "/orders/{orderId}/status", "handler": "OrderController#status", "validBody": false, "requiredHeaders": [] }
+    },
+    "outbound": {
+      "F1": { "client": "PaymentClient#charge", "method": "POST", "path": "/v1/payments/charges", "calledFrom": ["E1"] },
+      "F2": { "client": "PaymentClient#refund", "method": "POST", "path": "/v1/payments/charges/{chargeId}/refunds", "calledFrom": ["E2"] },
+      "F3": { "client": "InventoryClient#reserve", "method": "POST", "path": "/v2/inventory/holds", "calledFrom": ["E1"] },
+      "F4": { "client": "InventoryClient#release", "method": "DELETE", "path": "/v2/inventory/holds/{holdId}", "calledFrom": ["E2", "A1"] },
+      "F5": { "client": "CustomerClient#getCustomer", "method": "GET", "path": "/v1/customers/{customerId}", "calledFrom": ["E1"] },
+      "F6": { "client": "NotificationClient#send", "method": "POST", "path": "/v1/notifications", "calledFrom": ["E1"] }
+    },
+    "crossCutting": {
+      "X1": { "type": "filter", "class": "CorrelationIdFilter", "appliesTo": ["E1", "E2", "E3"] },
+      "X2": { "type": "filter", "class": "SecurityHeadersFilter", "appliesTo": ["E1", "E2", "E3"] },
+      "X3": { "type": "interceptor", "class": "ClientIdInterceptor", "appliesTo": ["E1", "E2"] },
+      "X4": { "type": "advice", "class": "GlobalExceptionHandler", "appliesTo": ["E1", "E2", "E3"] },
+      "X5": { "type": "feign-config", "class": "FeignClientsConfig + DownstreamErrorDecoder", "appliesTo": ["F1", "F2", "F3", "F4", "F5", "F6"] }
+    },
+    "async": {
+      "A1": { "type": "scheduled", "class": "StaleHoldSweeper#sweep", "conditional": "sweeper.enabled=true (off by default)", "calls": ["F4"] }
+    },
+    "framework": {
+      "S1": { "path": "/v3/api-docs", "source": "springdoc" },
+      "S2": { "path": "/swagger-ui/**", "source": "springdoc" },
+      "S3": { "path": "/actuator/{health,info,mappings,metrics}", "source": "actuator" }
+    }
+  },
+  "packages": [
+    {
+      "coordinate": "com.fasterxml.jackson.core:jackson-annotations",
+      "declaredVia": "Spring Boot BOM (transitive)",
+      "usage": "DIRECT: @JsonProperty/@JsonInclude/@JsonFormat on api DTOs, @JsonIgnoreProperties on client DTOs",
+      "inbound": ["E1", "E2", "E3"], "outbound": ["F1", "F2", "F3", "F4", "F5", "F6"], "crossCutting": ["X4"],
+      "probes": ["snake_case names in responses", "NON_NULL / NON_EMPTY inclusion", "completed_at date format", "unknown properties on client DTOs"]
+    },
+    {
+      "coordinate": "tools.jackson.core:jackson-databind",
+      "declaredVia": "Spring Boot BOM (Jackson 3, used by Spring MVC message conversion)",
+      "usage": "FRAMEWORK: all JSON bodies; DIRECT: AuditPublisher (JsonMapper)",
+      "inbound": ["E1", "E2", "E3"], "outbound": ["F1", "F2", "F3", "F4", "F5", "F6"], "crossCutting": ["X4"],
+      "verify": true
+    },
+    {
+      "coordinate": "com.fasterxml.jackson.core:jackson-core",
+      "declaredVia": "explicit pin, gradle.properties jackson_core_version",
+      "usage": "No code reference. Under Boot 4, MVC uses Jackson 3; Jackson 2 core is expected to be reached through springdoc (swagger-core).",
+      "inbound": [], "outbound": [], "framework": ["S1"],
+      "verify": true
+    },
+    {
+      "coordinate": "org.apache.tomcat.embed:tomcat-embed-el",
+      "declaredVia": "spring-boot-starter-validation (BOM)",
+      "usage": "FRAMEWORK: Bean Validation message interpolation. LineItem.unitPrice uses an EL expression (${validatedValue}).",
+      "inbound": ["E1", "E2", "E3"],
+      "probes": ["E1 items[0].unitPrice=0 -> message contains 'but was 0'"]
+    },
+    {
+      "coordinate": "org.hibernate.validator:hibernate-validator",
+      "declaredVia": "spring-boot-starter-validation (BOM)",
+      "usage": "FRAMEWORK: @Valid bodies on E1/E2, @Pattern path variable on E1/E2/E3",
+      "inbound": ["E1", "E2", "E3"]
+    },
+    {
+      "coordinate": "io.github.openfeign:feign-micrometer",
+      "declaredVia": "version catalog (libs.versions.toml)",
+      "usage": "FRAMEWORK only: Spring Cloud OpenFeign auto-configures the micrometer capability. Zero code references.",
+      "inbound": ["E1", "E2"], "outbound": ["F1", "F2", "F3", "F4", "F5", "F6"], "async": ["A1"]
+    },
+    {
+      "coordinate": "org.bouncycastle:bcprov-jdk18on",
+      "declaredVia": "explicit pin 1.85 on implementation; ALSO 1.80 on the 'codegen' configuration",
+      "expectedValidation": { "feedVersion": "1.85", "status": "VERSION_MISMATCH", "reason": "codegen configuration resolves 1.80" },
+      "usage": "DIRECT: PayloadSigner (HMAC-SHA256), called from CheckoutServiceImpl",
+      "inbound": ["E1"], "outbound": ["F1"],
+      "testsGenerated": false
+    },
+    {
+      "coordinate": "commons-fileupload:commons-fileupload",
+      "declaredVia": "explicit pin, gradle.properties",
+      "usage": "NONE: declared but never referenced; no multipart endpoints",
+      "inbound": [], "outbound": [],
+      "expectedResult": "MATCH with an explicit 'no surface' finding and evidence"
+    },
+    {
+      "coordinate": "commons-io:commons-io",
+      "declaredVia": "transitive (commons-fileupload), forced by resolutionStrategy to commons_io_force_version",
+      "usage": "NONE",
+      "inbound": [], "outbound": [],
+      "expectedResult": "MATCH on the forced version; tool must report the force as the reason"
+    },
+    {
+      "coordinate": "org.springdoc:springdoc-openapi-starter-webmvc-ui",
+      "declaredVia": "version catalog",
+      "usage": "FRAMEWORK: serves the OpenAPI document and Swagger UI; no business endpoints",
+      "inbound": [], "framework": ["S1", "S2"]
+    }
+  ]
+}

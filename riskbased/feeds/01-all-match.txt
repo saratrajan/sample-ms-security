@@ -1,0 +1,4 @@
+com.fasterxml.jackson.core:jackson-core 2.21.1
+io.github.openfeign:feign-micrometer 13.2.1
+commons-fileupload:commons-fileupload 1.6.0
+org.springdoc:springdoc-openapi-starter-webmvc-ui 3.0.0
